@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💸 Financial Freedom</title>
+<style>
+  :root {
+    --purple: #3C3489;
+    --purple-light: #AFA9EC;
+    --purple-pale: #EEEDFE;
+    --green: #0F6E56;
+    --green-mid: #1D9E75;
+    --green-light: #9FE1CB;
+    --red: #D85A30;
+    --red-light: #FAECE7;
+    --red-dark: #993C1D;
+    --amber: #EF9F27;
+    --amber-dark: #854F0B;
+    --gray: #888780;
+    --gray-light: #F1EFE8;
+    --gray-mid: #D3D1C7;
+    --blue-pale: #EEEDFE;
+    --text: #2C2C2A;
+    --text-secondary: #5F5E5A;
+    --text-tertiary: #888780;
+    --border: #D3D1C7;
+    --bg: #faf9f7;
+    --card-bg: #ffffff;
+    --surface: #F1EFE8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* LAYOUT */
+  .page { max-width: 780px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-bottom: 12px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-bottom: 10px; }
+  @media (max-width: 520px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+
+  /* CARDS */
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.1rem; margin-bottom: 12px; }
+  .surface { background: var(--surface); border-radius: 10px; padding: 0.8rem 1rem; }
+
+  /* HERO */
+  .hero { background: var(--purple); border-radius: 14px; padding: 1.4rem 1.5rem; margin-bottom: 12px; }
+  .hero-eyebrow { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--purple-light); margin-bottom: 4px; }
+  .hero-amount { font-size: 40px; font-weight: 600; color: var(--purple-pale); line-height: 1.1; }
+  .hero-sub { font-size: 13px; color: var(--purple-light); margin-top: 5px; line-height: 1.5; }
+  .progress-track { background: rgba(255,255,255,0.15); border-radius: 100px; height: 9px; margin: 1rem 0 0.4rem; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 100px; background: var(--green-light); transition: width 1s ease; }
+  .progress-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--purple-light); }
+
+  /* METRIC TILES */
+  .tile { background: var(--surface); border-radius: 10px; padding: 0.8rem 0.9rem; }
+  .tile-label { font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; letter-spacing: 0.02em; }
+  .tile-val { font-size: 20px; font-weight: 600; color: var(--text); }
+  .tile-val.green { color: var(--green); }
+  .tile-val.red { color: #A32D2D; }
+  .tile-val.amber { color: var(--amber-dark); }
+  .tile-sub { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+
+  /* SECTION LABEL */
+  .slabel { font-size: 10px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 10px; }
+
+  /* TAGS */
+  .tag { font-size: 10px; padding: 1px 7px; border-radius: 100px; white-space: nowrap; display: inline-block; }
+  .tag-hot { background: var(--red-light); color: var(--red-dark); }
+  .tag-next { background: var(--purple-pale); color: var(--purple); }
+  .tag-parked { background: #EAF3DE; color: #3B6D11; }
+  .tag-last { background: var(--gray-light); color: var(--gray); }
+
+  /* DEBT LIST */
+  .debt-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .debt-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .debt-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .debt-block { flex: 1; min-width: 0; }
+  .debt-name { font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px; }
+  .debt-note { font-size: 11px; color: var(--text-tertiary); }
+  .bar-wrap { width: 100%; height: 4px; background: var(--surface); border-radius: 100px; overflow: hidden; margin-top: 5px; }
+  .bar-fill { height: 100%; border-radius: 100px; }
+  .debt-amt { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+
+  /* SAVINGS */
+  .goal-item { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .goal-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .goal-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+  .goal-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .goal-meta { font-size: 11px; color: var(--text-secondary); }
+  .goal-track { background: var(--surface); border-radius: 100px; height: 7px; overflow: hidden; }
+  .goal-fill { height: 100%; border-radius: 100px; }
+  .goal-note { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+
+  /* SPENDING */
+  .spend-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .spend-cat { font-size: 13px; color: var(--text); flex: 1; }
+  .spend-bar-wrap { width: 80px; height: 5px; background: var(--surface); border-radius: 100px; overflow: hidden; flex-shrink: 0; }
+  .spend-bar { height: 100%; border-radius: 100px; }
+  .spend-amt { font-size: 13px; font-weight: 500; color: var(--text-secondary); min-width: 52px; text-align: right; }
+  .spend-pct { font-size: 10px; color: var(--text-tertiary); min-width: 28px; text-align: right; }
+
+  /* ALLOC BAR */
+  .alloc-bar { display: flex; height: 10px; border-radius: 100px; overflow: hidden; gap: 2px; margin: 10px 0 8px; }
+  .alloc-seg { height: 100%; }
+  .alloc-legend { display: flex; flex-wrap: wrap; gap: 12px; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* CALC */
+  .input-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .input-row label { font-size: 12px; color: var(--text-secondary); min-width: 110px; }
+  .input-row input { width: 100px; font-size: 13px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text); outline: none; }
+  .input-row input:focus { border-color: var(--purple); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+  .calc-results { display: flex; gap: 24px; flex-wrap: wrap; }
+  .calc-result-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
+  .calc-result-val { font-size: 22px; font-weight: 600; }
+
+  /* STATUS BAR */
+  .status-bar { display: flex; align-items: center; gap: 8px; padding: 0.65rem 1rem; background: var(--surface); border-radius: 10px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.loading { background: var(--amber); animation: pulse 1.2s infinite; }
+  .status-dot.ok { background: var(--green-mid); }
+  .status-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* SETUP */
+  .setup-panel { background: var(--purple-pale); border: 1px solid var(--purple-light); border-radius: 14px; padding: 1.2rem 1.4rem; margin-bottom: 12px; }
+  .setup-panel h2 { font-size: 15px; font-weight: 600; color: var(--purple); margin-bottom: 6px; }
+  .setup-panel p { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5; }
+  .setup-panel input { width: 100%; font-size: 13px; padding: 8px 10px; border: 1px solid var(--purple-light); border-radius: 8px; background: white; color: var(--text); outline: none; margin-bottom: 8px; }
+  .setup-panel input:focus { border-color: var(--purple); }
+  .btn-primary { background: var(--purple); color: white; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .btn-primary:hover { background: #4a40a0; }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+  .btn-secondary:hover { background: var(--surface); }
+
+  /* EDIT MODE */
+  .edit-btn { font-size: 11px; color: var(--purple); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .edit-btn:hover { background: var(--purple-pale); }
+  .edit-input { width: 90px; font-size: 13px; padding: 3px 6px; border: 1px solid var(--purple-light); border-radius: 6px; background: white; color: var(--text); }
+
+  /* FOOTER */
+  .footer { text-align: center; font-size: 11px; color: var(--text-tertiary); margin-top: 2rem; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+  /* TOTAL ROW */
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; padding-top: 9px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .total-label { font-size: 12px; color: var(--text-secondary); }
+  .total-val { font-size: 15px; font-weight: 600; color: var(--text); }
+
+  /* TIP */
+  .tip { background: var(--surface); border-radius: 9px; padding: 0.65rem 0.9rem; margin-top: 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .tip strong { color: var(--text); font-weight: 500; }
+
+  /* REFRESH BTN */
+  .refresh-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 11px; color: var(--text-secondary); cursor: pointer; }
+  .refresh-btn:hover { background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- SETUP PANEL (shown only if no token) -->
+  <div class="setup-panel" id="setup-panel">
+    <h2>🔑 Connect your Up Bank</h2>
+    <p>Your Up Bank personal access token is stored only in your browser — never sent anywhere except directly to Up Bank's API.</p>
+    <input type="password" id="token-input" placeholder="up:yeah:xxxxxxxxxxxx" autocomplete="off">
+    <br>
+    <button class="btn-primary" onclick="saveToken()">Save & load dashboard</button>
+    <p style="margin-top:10px;margin-bottom:0;font-size:11px;">Get your token at <a href="https://api.up.com.au/getting_started" target="_blank" style="color:var(--purple);">api.up.com.au/getting_started</a></p>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar" id="status-bar" style="display:none;">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span id="status-text">Loading spending data...</span>
+    <span style="flex:1;"></span>
+    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+    <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="clearToken()">Change token</button>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero" id="hero-section" style="display:none;">
+    <div class="hero-eyebrow">Net worth</div>
+    <div class="hero-amount" id="hero-nw">–</div>
+    <div class="hero-sub" id="hero-sub">Loading your numbers...</div>
+    <div class="progress-track"><div class="progress-fill" id="hero-bar" style="width:0%;"></div></div>
+    <div class="progress-labels"><span>In debt</span><span id="hero-pct">–</span><span>Financial freedom</span></div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="grid-3" id="metrics-section" style="display:none;">
+    <div class="tile">
+      <div class="tile-label">Fortnightly income</div>
+      <div class="tile-val">$3,163</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Spending this fortnight</div>
+      <div class="tile-val amber" id="m-spent">–</div>
+      <div class="tile-sub" id="m-period">–</div>
+    </div>
+    <div class="tile">
+      <div class="tile-label">Emergency fund</div>
+      <div class="tile-val green" id="m-savings">$1,000</div>
+      <div class="tile-sub">AMP Bank</div>
+    </div>
+  </div>
+
+  <!-- ALLOCATION -->
+  <div class="card" id="alloc-section" style="display:none;">
+    <div class="slabel">Fortnightly allocation</div>
+    <div class="grid-4">
+      <div class="tile">
+        <div class="tile-label">Debt repayment</div>
+        <div style="font-size:18px;font-weight:600;color:#D85A30;">$305</div>
+        <div class="tile-sub">NAB $280 · CBA $25</div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Savings</div>
+        <div style="font-size:18px;font-weight:600;color:var(--green);">$316</div>
+        <div class="tile-sub">10% emergency fund</div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Living expenses</div>
+        <div style="font-size:18px;font-weight:600;color:#7F77DD;" id="alloc-living">$2,542</div>
+        <div class="tile-sub">essentials + subs</div>
+      </div>
+      <div class="tile">
+        <div class="tile-label">Yours to spend</div>
+        <div style="font-size:18px;font-weight:600;color:var(--green);" id="alloc-allowance">–</div>
+        <div class="tile-sub" id="alloc-allowance-sub">calculating...</div>
+      </div>
+    </div>
+    <div class="alloc-bar">
+      <div class="alloc-seg" style="width:10%;background:#D85A30;border-radius:100px 0 0 100px;"></div>
+      <div class="alloc-seg" style="width:10%;background:var(--green-mid);"></div>
+      <div class="alloc-seg" style="width:40%;background:#7F77DD;" id="alloc-bar-living"></div>
+      <div class="alloc-seg" style="width:40%;background:#AFA9EC;border-radius:0 100px 100px 0;" id="alloc-bar-allow"></div>
+    </div>
+    <div class="alloc-legend">
+      <span class="leg"><span class="leg-dot" style="background:#D85A30;"></span>Debt $305</span>
+      <span class="leg"><span class="leg-dot" style="background:var(--green-mid);"></span>Savings $316</span>
+      <span class="leg"><span class="leg-dot" style="background:#7F77DD;"></span>Living</span>
+      <span class="leg"><span class="leg-dot" style="background:#AFA9EC;"></span>Spending allowance</span>
+    </div>
+  </div>
+
+  <div class="grid-2" id="debt-savings-section" style="display:none;">
+
+    <!-- DEBT -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="section-header">
+        <div class="slabel" style="margin-bottom:0;">Debt payoff</div>
+        <button class="edit-btn" onclick="toggleDebtEdit()">✏️ edit</button>
+      </div>
+
+      <div class="debt-item">
+        <div class="debt-dot" style="background:#D85A30;"></div>
+        <div class="debt-block">
+          <div class="debt-name">NAB Credit Card <span class="tag tag-hot">Priority</span></div>
+          <div class="debt-note">14% interest · $280/fn · ~8 months</div>
+          <div class="bar-wrap"><div class="bar-fill" style="background:#D85A30;" id="bar-nab"></div></div>
+        </div>
+        <div class="debt-amt"><span id="bal-nab-display">$4,406</span><br><input class="edit-input" id="bal-nab-edit" style="display:none;" type="number" value="4406"></div>
+      </div>
+
+      <div class="debt-item">
+        <div class="debt-dot" style="background:#7F77DD;"></div>
+        <div class="debt-block">
+          <div class="debt-name">CBA Credit Card <span class="tag tag-next">Next</span></div>
+          <div class="debt-note">0% + $15/mo fee · attack after NAB</div>
+          <div class="bar-wrap"><div class="bar-fill" style="background:#7F77DD;" id="bar-cba"></div></div>
+        </div>
+        <div class="debt-amt"><span id="bal-cba-display">$980</span><br><input class="edit-input" id="bal-cba-edit" style="display:none;" type="number" value="980"></div>
+      </div>
+
+      <div class="debt-item">
+        <div class="debt-dot" style="background:#AFA9EC;"></div>
+        <div class="debt-block">
+          <div class="debt-name">Latitude <span class="tag tag-parked">Parked</span></div>
+          <div class="debt-note">0% · no payments until Sep 2026</div>
+          <div class="bar-wrap"><div class="bar-fill" style="background:#AFA9EC;" id="bar-lat"></div></div>
+        </div>
+        <div class="debt-amt"><span id="bal-lat-display">$4,568</span><br><input class="edit-input" id="bal-lat-edit" style="display:none;" type="number" value="4568"></div>
+      </div>
+
+      <div class="debt-item">
+        <div class="debt-dot" style="background:#B4B2A9;"></div>
+        <div class="debt-block">
+          <div class="debt-name">BeforePay <span class="tag tag-last">Last</span></div>
+          <div class="debt-note">0% · indefinite moratorium</div>
+          <div class="bar-wrap"><div class="bar-fill" style="background:#B4B2A9;" id="bar-bp"></div></div>
+        </div>
+        <div class="debt-amt"><span id="bal-bp-display">$2,000</span><br><input class="edit-input" id="bal-bp-edit" style="display:none;" type="number" value="2000"></div>
+      </div>
+
+      <div class="total-row">
+        <span class="total-label">Total debt</span>
+        <span class="total-val" id="total-debt">$11,954</span>
+      </div>
+      <div id="debt-edit-btns" style="display:none;margin-top:10px;display:none;gap:8px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="saveDebt()">Save balances</button>
+        <button class="btn-secondary" onclick="toggleDebtEdit()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- SAVINGS -->
+    <div class="card" style="margin-bottom:0;">
+      <div class="section-header">
+        <div class="slabel" style="margin-bottom:0;">Savings</div>
+        <button class="edit-btn" onclick="toggleSavingsEdit()">✏️ edit</button>
+      </div>
+
+      <div class="goal-item">
+        <div class="goal-top">
+          <span class="goal-name">Emergency fund</span>
+          <span class="goal-meta" id="ef-meta">40% · $1,000 / $2,500</span>
+        </div>
+        <div class="goal-track"><div class="goal-fill" style="background:var(--green-mid);" id="ef-bar"></div></div>
+        <div class="goal-note">AMP Bank · <span id="ef-note">$1,500 to go</span></div>
+        <div id="ef-edit" style="display:none;margin-top:6px;">
+          <input class="edit-input" style="width:120px;" type="number" id="ef-val" value="1000" placeholder="Current balance">
+        </div>
+      </div>
+
+      <div class="goal-item">
+        <div class="goal-top">
+          <span class="goal-name">Sinking fund</span>
+          <span class="goal-meta" id="sf-meta">Not started</span>
+        </div>
+        <div class="goal-track"><div class="goal-fill" style="background:var(--amber);width:0%;" id="sf-bar"></div></div>
+        <div class="goal-note">Cleo maintenance (May–Jun)</div>
+        <div id="sf-edit" style="display:none;margin-top:6px;">
+          <input class="edit-input" style="width:120px;" type="number" id="sf-val" value="0" placeholder="Current balance">
+        </div>
+      </div>
+
+      <div class="total-row">
+        <span class="total-label">Total saved</span>
+        <span class="total-val" style="color:var(--green);" id="total-savings">$1,000</span>
+      </div>
+
+      <div id="savings-edit-btns" style="display:none;margin-top:10px;gap:8px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="saveSavings()">Save</button>
+        <button class="btn-secondary" onclick="toggleSavingsEdit()">Cancel</button>
+      </div>
+
+      <div class="tip">
+        <strong>Next milestone:</strong> Build emergency fund to $2,500 before increasing debt payments.
+      </div>
+    </div>
+  </div>
+
+  <!-- SPENDING -->
+  <div class="card" id="spending-section" style="display:none;margin-top:12px;">
+    <div class="section-header">
+      <div class="slabel" style="margin-bottom:0;">Spending this fortnight</div>
+      <span style="font-size:11px;color:var(--text-tertiary);" id="spending-period-label">–</span>
+    </div>
+    <div id="spending-rows">
+      <div style="font-size:13px;color:var(--text-tertiary);padding:1rem 0;text-align:center;">Loading from Up Bank...</div>
+    </div>
+    <div class="tip" id="allowance-tip">
+      <strong>24-hour rule:</strong> Cart sitting? Leave it overnight. Check your balance before you buy.
+    </div>
+  </div>
+
+  <!-- PAYOFF CALC -->
+  <div class="card" id="calc-section" style="display:none;margin-top:12px;">
+    <div class="slabel">NAB payoff calculator</div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Adjust your fortnightly payment to see how fast you clear it.</p>
+    <div class="input-row"><label>Balance ($)</label><input type="number" id="c-bal" value="4406" min="0"></div>
+    <div class="input-row"><label>Interest rate (% p.a.)</label><input type="number" id="c-rate" value="14" step="0.1"></div>
+    <div class="input-row"><label>Fortnightly payment ($)</label><input type="number" id="c-pay" value="280" min="1"></div>
+    <div class="divider"></div>
+    <div class="calc-results">
+      <div><div class="calc-result-label">Paid off in</div><div class="calc-result-val" style="color:var(--green);" id="c-months">–</div></div>
+      <div><div class="calc-result-label">Total interest paid</div><div class="calc-result-val" style="color:var(--amber-dark);" id="c-interest">–</div></div>
+    </div>
+  </div>
+
+  <div class="footer" id="footer" style="display:none;">
+    Dashboard · <span id="last-updated">–</span> · Up Bank data auto-loads · Balances updated manually
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+const INCOME = 3163;
+const FIXED_DEBT_PAYMENTS = 305; // NAB $280 + CBA $25
+const FIXED_SAVINGS = 316;
+// Budget targets per category (fortnightly)
+const TARGETS = {
+  'Essentials': 900,
+  'Subscriptions': 120,
+  'Self & Health': 150,
+  'Discretionary': 300,
+  'Impulse': 200
+};
+const CAT_COLORS = {
+  'Essentials': '#7F77DD',
+  'Subscriptions': '#1D9E75',
+  'Self & Health': '#EF9F27',
+  'Discretionary': '#D85A30',
+  'Impulse': '#B4B2A9'
+};
+
+// ── MERCHANT CATEGORISATION (mirrors Python script) ──────────
+const MERCHANT_CATS = {
+  // Essentials
+  'woolworths': 'Essentials', 'coles': 'Essentials', 'aldi': 'Essentials',
+  'iga': 'Essentials', 'harris farm': 'Essentials', 'costco': 'Essentials',
+  'electricity': 'Essentials', 'energy': 'Essentials', 'water': 'Essentials',
+  'internet': 'Essentials', 'telstra': 'Essentials', 'optus': 'Essentials',
+  'vodafone': 'Essentials', 'belong': 'Essentials', 'aussie broadband': 'Essentials',
+  'real insurance': 'Essentials', 'bupa': 'Essentials', 'medibank': 'Essentials',
+  'nib': 'Essentials', 'transport': 'Essentials', 'translink': 'Essentials',
+  'go card': 'Essentials', 'petrol': 'Essentials', 'bp': 'Essentials',
+  'caltex': 'Essentials', 'shell': 'Essentials', '7-eleven': 'Essentials',
+  'ampol': 'Essentials', 'rent': 'Essentials',
+  // Subscriptions
+  'netflix': 'Subscriptions', 'spotify': 'Subscriptions', 'disney': 'Subscriptions',
+  'apple': 'Subscriptions', 'google': 'Subscriptions', 'amazon prime': 'Subscriptions',
+  'binge': 'Subscriptions', 'stan': 'Subscriptions', 'youtube': 'Subscriptions',
+  'microsoft': 'Subscriptions', 'adobe': 'Subscriptions', 'canva': 'Subscriptions',
+  'chatgpt': 'Subscriptions', 'openai': 'Subscriptions', 'claude': 'Subscriptions',
+  // Self & Health
+  'pharmacy': 'Self & Health', 'chemist': 'Self & Health', 'priceline': 'Self & Health',
+  'doctor': 'Self & Health', 'gp': 'Self & Health', 'bulk bill': 'Self & Health',
+  'dentist': 'Self & Health', 'physio': 'Self & Health', 'psychologist': 'Self & Health',
+  'therapist': 'Self & Health', 'gym': 'Self & Health', 'fitness': 'Self & Health',
+  'yoga': 'Self & Health', 'pilates': 'Self & Health', 'hair': 'Self & Health',
+  'salon': 'Self & Health', 'beauty': 'Self & Health', 'nails': 'Self & Health',
+  'massage': 'Self & Health', 'optical': 'Self & Health',
+  // Discretionary
+  'restaurant': 'Discretionary', 'cafe': 'Discretionary', 'coffee': 'Discretionary',
+  'mcdonalds': 'Discretionary', 'kfc': 'Discretionary', 'uber eats': 'Discretionary',
+  'doordash': 'Discretionary', 'menulog': 'Discretionary', 'deliveroo': 'Discretionary',
+  'dominos': 'Discretionary', 'subway': 'Discretionary', 'grill\'d': 'Discretionary',
+  'clothing': 'Discretionary', 'kmart': 'Discretionary', 'target': 'Discretionary',
+  'big w': 'Discretionary', 'cotton on': 'Discretionary', 'uniqlo': 'Discretionary',
+  'zara': 'Discretionary', 'h&m': 'Discretionary', 'myer': 'Discretionary',
+  'david jones': 'Discretionary', 'jb hi-fi': 'Discretionary', 'harvey norman': 'Discretionary',
+  'ebay': 'Discretionary', 'amazon': 'Discretionary', 'event cinema': 'Discretionary',
+  'hoyts': 'Discretionary', 'reading cinema': 'Discretionary',
+  // Impulse
+  'temu': 'Impulse', 'shein': 'Impulse', 'wish': 'Impulse',
+  'lotterywest': 'Impulse', 'tatts': 'Impulse', 'sportsbet': 'Impulse'
+};
+
+function categorise(txn) {
+  const desc = (txn.attributes.description || '').toLowerCase();
+  const raw = (txn.attributes.rawText || '').toLowerCase();
+  const combined = desc + ' ' + raw;
+  for (const [keyword, cat] of Object.entries(MERCHANT_CATS)) {
+    if (combined.includes(keyword)) return cat;
+  }
+  return 'Discretionary';
+}
+
+// ── STORAGE ──────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('up_token'); }
+function saveToken() {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t) return;
+  localStorage.setItem('up_token', t);
+  init();
+}
+function clearToken() {
+  localStorage.removeItem('up_token');
+  location.reload();
+}
+
+// Manual balances
+function getBalances() {
+  return JSON.parse(localStorage.getItem('balances') || '{"nab":4406,"cba":980,"lat":4568,"bp":2000,"ef":1000,"sf":0}');
+}
+function setBalances(b) { localStorage.setItem('balances', JSON.stringify(b)); }
+
+// ── FORTNIGHT DATES ──────────────────────────────────────────
+function getFortnightDates() {
+  // Pay cycle: anchor to a known payday. Using 2026-03-25 as reference.
+  const anchor = new Date('2026-03-25T00:00:00');
+  const now = new Date();
+  const diff = Math.floor((now - anchor) / (14 * 24 * 3600 * 1000));
+  const start = new Date(anchor);
+  start.setDate(anchor.getDate() + diff * 14);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 13);
+  return { start, end };
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+}
+
+// ── UP BANK API ──────────────────────────────────────────────
+async function fetchUpTransactions(token, since, until) {
+  const sinceISO = since.toISOString();
+  const untilISO = until.toISOString();
+  let url = `https://api.up.com.au/api/v1/transactions?filter[since]=${sinceISO}&filter[until]=${untilISO}&filter[status]=SETTLED&page[size]=100`;
+  let txns = [];
+  while (url) {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('Up Bank API error: ' + res.status);
+    const data = await res.json();
+    txns = txns.concat(data.data || []);
+    url = data.links && data.links.next ? data.links.next : null;
+  }
+  return txns;
+}
+
+// ── RENDER ──────────────────────────────────────────────────
+function showDashboard() {
+  document.getElementById('setup-panel').style.display = 'none';
+  document.getElementById('status-bar').style.display = 'flex';
+  document.getElementById('hero-section').style.display = 'block';
+  document.getElementById('metrics-section').style.display = 'grid';
+  document.getElementById('alloc-section').style.display = 'block';
+  document.getElementById('debt-savings-section').style.display = 'grid';
+  document.getElementById('spending-section').style.display = 'block';
+  document.getElementById('calc-section').style.display = 'block';
+  document.getElementById('footer').style.display = 'block';
+}
+
+function setStatus(state, text) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot ' + state;
+  document.getElementById('status-text').textContent = text;
+}
+
+function renderDebt(b) {
+  const total = b.nab + b.cba + b.lat + b.bp;
+  const max = Math.max(b.nab, b.cba, b.lat, b.bp);
+  ['nab','cba','lat','bp'].forEach(k => {
+    const pct = Math.round(b[k] / max * 100);
+    document.getElementById('bar-' + (k === 'bp' ? 'bp' : k)).style.width = pct + '%';
+    document.getElementById('bal-' + k + '-display').textContent = '$' + Math.round(b[k]).toLocaleString();
+    document.getElementById('bal-' + k + '-edit').value = b[k];
+  });
+  document.getElementById('total-debt').textContent = '$' + Math.round(total).toLocaleString();
+  return total;
+}
+
+function renderSavings(b) {
+  const ef = b.ef || 0;
+  const sf = b.sf || 0;
+  const efGoal = 2500, sfGoal = 500;
+  document.getElementById('ef-bar').style.width = Math.min(100, Math.round(ef/efGoal*100)) + '%';
+  document.getElementById('ef-meta').textContent = Math.round(ef/efGoal*100) + '% · $' + ef.toLocaleString() + ' / $' + efGoal.toLocaleString();
+  document.getElementById('ef-note').textContent = '$' + (efGoal - ef).toLocaleString() + ' to go';
+  document.getElementById('ef-val').value = ef;
+  document.getElementById('sf-bar').style.width = Math.min(100, Math.round(sf/sfGoal*100)) + '%';
+  document.getElementById('sf-meta').textContent = sf > 0 ? Math.round(sf/sfGoal*100) + '% · $' + sf + ' / $' + sfGoal : 'Not started';
+  document.getElementById('sf-val').value = sf;
+  const total = ef + sf;
+  document.getElementById('total-savings').textContent = '$' + total.toLocaleString();
+  document.getElementById('m-savings').textContent = '$' + ef.toLocaleString();
+  return total;
+}
+
+function renderHero(totalDebt, totalSavings) {
+  const nw = totalSavings - totalDebt;
+  const worst = -9954;
+  const pct = Math.max(0, Math.min(100, Math.round((nw - worst) / (0 - worst) * 100)));
+  document.getElementById('hero-nw').textContent = (nw < 0 ? '–$' : '$') + Math.abs(Math.round(nw)).toLocaleString();
+  document.getElementById('hero-sub').textContent = '$' + Math.round(totalDebt).toLocaleString() + ' in debt · $' + Math.round(totalSavings).toLocaleString() + ' in savings · Every payment moves this number up.';
+  document.getElementById('hero-bar').style.width = pct + '%';
+  document.getElementById('hero-pct').textContent = pct + '% of the way to $0';
+}
+
+function renderSpending(txns) {
+  const { start, end } = getFortnightDates();
+  document.getElementById('spending-period-label').textContent = fmtDate(start) + ' – ' + fmtDate(end);
+  document.getElementById('m-period').textContent = fmtDate(start) + ' – ' + fmtDate(end);
+
+  // Filter: exclude internal transfers, savings movements
+  const filtered = txns.filter(t => {
+    const amt = parseFloat(t.attributes.amount.value);
+    if (amt >= 0) return false; // only debits
+    const desc = (t.attributes.description || '').toLowerCase();
+    if (desc.includes('transfer') || desc.includes('save') || desc.includes('round up')) return false;
+    const cat = t.relationships?.category?.data?.id || '';
+    if (cat === 'transfersandrefunds') return false;
+    return true;
+  });
+
+  // Categorise
+  const cats = {};
+  Object.keys(TARGETS).forEach(c => cats[c] = 0);
+  filtered.forEach(t => {
+    const amt = Math.abs(parseFloat(t.attributes.amount.value));
+    const cat = categorise(t);
+    cats[cat] = (cats[cat] || 0) + amt;
+  });
+
+  const totalSpent = Object.values(cats).reduce((a,b) => a+b, 0);
+  document.getElementById('m-spent').textContent = '$' + Math.round(totalSpent).toLocaleString();
+
+  // Calc allowance remaining
+  const living = totalSpent;
+  const remaining = INCOME - FIXED_DEBT_PAYMENTS - FIXED_SAVINGS - living;
+  document.getElementById('alloc-living').textContent = '$' + Math.round(living).toLocaleString();
+  document.getElementById('alloc-allowance').textContent = remaining >= 0 ? '$' + Math.round(remaining).toLocaleString() : '–$' + Math.abs(Math.round(remaining)).toLocaleString();
+  document.getElementById('alloc-allowance').style.color = remaining >= 0 ? 'var(--green)' : '#A32D2D';
+  document.getElementById('alloc-allowance-sub').textContent = remaining >= 0 ? 'remaining this fortnight' : 'over budget';
+
+  const livingPct = Math.round(living / INCOME * 100);
+  const allowPct = Math.max(0, 100 - 10 - 10 - livingPct);
+  document.getElementById('alloc-bar-living').style.width = livingPct + '%';
+  document.getElementById('alloc-bar-allow').style.width = allowPct + '%';
+
+  // Render spending rows
+  const rows = document.getElementById('spending-rows');
+  const maxAmt = Math.max(...Object.values(cats), 1);
+  rows.innerHTML = Object.entries(cats).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => {
+    const pct = Math.round(amt / (TARGETS[cat] || 1) * 100);
+    const barW = Math.min(100, Math.round(amt / maxAmt * 100));
+    const over = amt > (TARGETS[cat] || Infinity);
+    return `<div class="spend-row">
+      <span class="spend-cat">${cat}</span>
+      <div class="spend-bar-wrap"><div class="spend-bar" style="width:${barW}%;background:${over ? '#D85A30' : CAT_COLORS[cat]};"></div></div>
+      <span class="spend-pct" style="color:${over?'#A32D2D':'var(--text-tertiary)'};">${pct}%</span>
+      <span class="spend-amt" style="color:${over?'#A32D2D':'var(--text-secondary)'};">$${Math.round(amt).toLocaleString()}</span>
+    </div>`;
+  }).join('');
+
+  // Tip
+  document.getElementById('allowance-tip').innerHTML = `<strong>24-hour rule:</strong> Cart sitting? Leave it overnight. You've spent <strong>$${Math.round(totalSpent).toLocaleString()}</strong> this fortnight — check your balance before you buy.`;
+}
+
+// ── DEBT EDIT ────────────────────────────────────────────────
+let debtEditOpen = false;
+function toggleDebtEdit() {
+  debtEditOpen = !debtEditOpen;
+  ['nab','cba','lat','bp'].forEach(k => {
+    document.getElementById('bal-' + k + '-display').style.display = debtEditOpen ? 'none' : 'inline';
+    document.getElementById('bal-' + k + '-edit').style.display = debtEditOpen ? 'inline' : 'none';
+  });
+  const btns = document.getElementById('debt-edit-btns');
+  btns.style.display = debtEditOpen ? 'flex' : 'none';
+}
+function saveDebt() {
+  const b = getBalances();
+  ['nab','cba','lat','bp'].forEach(k => {
+    b[k] = parseFloat(document.getElementById('bal-' + k + '-edit').value) || 0;
+  });
+  setBalances(b);
+  const totalDebt = renderDebt(b);
+  const totalSavings = b.ef + b.sf;
+  renderHero(totalDebt, totalSavings);
+  toggleDebtEdit();
+}
+
+// ── SAVINGS EDIT ─────────────────────────────────────────────
+let savingsEditOpen = false;
+function toggleSavingsEdit() {
+  savingsEditOpen = !savingsEditOpen;
+  document.getElementById('ef-edit').style.display = savingsEditOpen ? 'block' : 'none';
+  document.getElementById('sf-edit').style.display = savingsEditOpen ? 'block' : 'none';
+  document.getElementById('savings-edit-btns').style.display = savingsEditOpen ? 'flex' : 'none';
+}
+function saveSavings() {
+  const b = getBalances();
+  b.ef = parseFloat(document.getElementById('ef-val').value) || 0;
+  b.sf = parseFloat(document.getElementById('sf-val').value) || 0;
+  setBalances(b);
+  const totalSavings = renderSavings(b);
+  const totalDebt = b.nab + b.cba + b.lat + b.bp;
+  renderHero(totalDebt, totalSavings);
+  toggleSavingsEdit();
+}
+
+// ── PAYOFF CALC ──────────────────────────────────────────────
+function runCalc() {
+  const bal = parseFloat(document.getElementById('c-bal').value) || 0;
+  const rate = parseFloat(document.getElementById('c-rate').value) || 0;
+  const payFn = parseFloat(document.getElementById('c-pay').value) || 1;
+  const payMonthly = payFn * 26 / 12;
+  const mr = rate / 100 / 12;
+  if (mr > 0 && payMonthly <= bal * mr) {
+    document.getElementById('c-months').textContent = 'Never';
+    document.getElementById('c-interest').textContent = '—';
+    return;
+  }
+  let b = bal, interest = 0, months = 0;
+  while (b > 0.01 && months < 600) {
+    const i = mr > 0 ? b * mr : 0;
+    interest += i;
+    b = b + i - payMonthly;
+    months++;
+  }
+  const yrs = Math.floor(months / 12);
+  const mths = months % 12;
+  document.getElementById('c-months').textContent = (yrs > 0 ? yrs + 'y ' : '') + mths + 'm';
+  document.getElementById('c-interest').textContent = '$' + Math.round(interest).toLocaleString();
+}
+['c-bal','c-rate','c-pay'].forEach(id => document.getElementById(id).addEventListener('input', runCalc));
+
+// ── MAIN LOAD ────────────────────────────────────────────────
+async function loadAll() {
+  const token = getToken();
+  if (!token) return;
+  showDashboard();
+  setStatus('loading', 'Loading spending from Up Bank...');
+
+  const b = getBalances();
+  const totalDebt = renderDebt(b);
+  const totalSavings = renderSavings(b);
+  renderHero(totalDebt, totalSavings);
+  runCalc();
+
+  try {
+    const { start, end } = getFortnightDates();
+    const until = new Date(end);
+    until.setDate(end.getDate() + 1);
+    const txns = await fetchUpTransactions(token, start, until);
+    renderSpending(txns);
+    setStatus('ok', 'Up to date · ' + new Date().toLocaleTimeString('en-AU', {hour:'2-digit',minute:'2-digit'}));
+    document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleString('en-AU', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  } catch (e) {
+    setStatus('error', 'Could not load Up Bank data — check your token');
+    document.getElementById('spending-rows').innerHTML = '<div style="font-size:13px;color:#A32D2D;padding:0.5rem 0;">Failed to load: ' + e.message + '</div>';
+  }
+}
+
+function init() {
+  const token = getToken();
+  if (token) {
+    loadAll();
+  } else {
+    document.getElementById('setup-panel').style.display = 'block';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
