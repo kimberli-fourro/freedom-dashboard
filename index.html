@@ -237,8 +237,8 @@
     <div class="grid-4">
       <div class="tile">
         <div class="tile-label">Debt repayment</div>
-        <div style="font-size:18px;font-weight:600;color:#D85A30;">$305</div>
-        <div class="tile-sub">NAB $280 · CBA $25</div>
+        <div style="font-size:18px;font-weight:600;color:#D85A30;">$71</div>
+        <div class="tile-sub">NAB ~$46 · CBA $25</div>
       </div>
       <div class="tile">
         <div class="tile-label">Savings</div>
@@ -257,13 +257,13 @@
       </div>
     </div>
     <div class="alloc-bar">
-      <div class="alloc-seg" style="width:10%;background:#D85A30;border-radius:100px 0 0 100px;"></div>
+      <div class="alloc-seg" style="width:2%;background:#D85A30;border-radius:100px 0 0 100px;"></div>
       <div class="alloc-seg" style="width:10%;background:var(--green-mid);"></div>
       <div class="alloc-seg" style="width:40%;background:#7F77DD;" id="alloc-bar-living"></div>
       <div class="alloc-seg" style="width:40%;background:#AFA9EC;border-radius:0 100px 100px 0;" id="alloc-bar-allow"></div>
     </div>
     <div class="alloc-legend">
-      <span class="leg"><span class="leg-dot" style="background:#D85A30;"></span>Debt $305</span>
+      <span class="leg"><span class="leg-dot" style="background:#D85A30;"></span>Debt $71</span>
       <span class="leg"><span class="leg-dot" style="background:var(--green-mid);"></span>Savings $316</span>
       <span class="leg"><span class="leg-dot" style="background:#7F77DD;"></span>Living</span>
       <span class="leg"><span class="leg-dot" style="background:#AFA9EC;"></span>Spending allowance</span>
@@ -283,7 +283,8 @@
         <div class="debt-dot" style="background:#D85A30;"></div>
         <div class="debt-block">
           <div class="debt-name">NAB Credit Card <span class="tag tag-hot">Priority</span></div>
-          <div class="debt-note">14% interest · $280/fn · ~8 months</div>
+          <div class="debt-note">14% interest · $100/mo minimum · ~$46/fn</div>
+          <div class="debt-note" style="color:var(--purple);margin-top:2px;">Increase to $280/fn once stabilised</div>
           <div class="bar-wrap"><div class="bar-fill" style="background:#D85A30;" id="bar-nab"></div></div>
         </div>
         <div class="debt-amt"><span id="bal-nab-display">$4,406</span><br><input class="edit-input" id="bal-nab-edit" style="display:none;" type="number" value="4406"></div>
@@ -348,18 +349,6 @@
         </div>
       </div>
 
-      <div class="goal-item">
-        <div class="goal-top">
-          <span class="goal-name">Sinking fund</span>
-          <span class="goal-meta" id="sf-meta">Not started</span>
-        </div>
-        <div class="goal-track"><div class="goal-fill" style="background:var(--amber);width:0%;" id="sf-bar"></div></div>
-        <div class="goal-note">Cleo maintenance (May–Jun)</div>
-        <div id="sf-edit" style="display:none;margin-top:6px;">
-          <input class="edit-input" style="width:120px;" type="number" id="sf-val" value="0" placeholder="Current balance">
-        </div>
-      </div>
-
       <div class="total-row">
         <span class="total-label">Total saved</span>
         <span class="total-val" style="color:var(--green);" id="total-savings">$1,000</span>
@@ -396,7 +385,7 @@
     <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">Adjust your fortnightly payment to see how fast you clear it.</p>
     <div class="input-row"><label>Balance ($)</label><input type="number" id="c-bal" value="4406" min="0"></div>
     <div class="input-row"><label>Interest rate (% p.a.)</label><input type="number" id="c-rate" value="14" step="0.1"></div>
-    <div class="input-row"><label>Fortnightly payment ($)</label><input type="number" id="c-pay" value="280" min="1"></div>
+    <div class="input-row"><label>Fortnightly payment ($)</label><input type="number" id="c-pay" value="46" min="1"></div>
     <div class="divider"></div>
     <div class="calc-results">
       <div><div class="calc-result-label">Paid off in</div><div class="calc-result-val" style="color:var(--green);" id="c-months">–</div></div>
@@ -413,7 +402,7 @@
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 const INCOME = 3163;
-const FIXED_DEBT_PAYMENTS = 305; // NAB $280 + CBA $25
+const FIXED_DEBT_PAYMENTS = 71; // NAB ~$46/fn ($100/mo) + CBA $25/fn
 const FIXED_SAVINGS = 316;
 // Budget targets per category (fortnightly)
 const TARGETS = {
@@ -608,18 +597,13 @@ function renderDebt(b) {
 
 function renderSavings(b) {
   const ef = b.ef || 0;
-  const sf = b.sf || 0;
-  const efGoal = 2500, sfGoal = 500;
+  const efGoal = 2500;
   document.getElementById('ef-bar').style.width = Math.min(100, Math.round(ef/efGoal*100)) + '%';
   document.getElementById('ef-meta').textContent = Math.round(ef/efGoal*100) + '% · $' + ef.toLocaleString() + ' / $' + efGoal.toLocaleString();
   document.getElementById('ef-note').textContent = '$' + (efGoal - ef).toLocaleString() + ' to go';
   document.getElementById('ef-val').value = ef;
-  document.getElementById('sf-bar').style.width = Math.min(100, Math.round(sf/sfGoal*100)) + '%';
-  document.getElementById('sf-meta').textContent = sf > 0 ? Math.round(sf/sfGoal*100) + '% · $' + sf + ' / $' + sfGoal : 'Not started';
-  document.getElementById('sf-val').value = sf;
-  const total = ef + sf;
-  document.getElementById('total-savings').textContent = '$' + total.toLocaleString();
-  return total;
+  document.getElementById('total-savings').textContent = '$' + ef.toLocaleString();
+  return ef;
 }
 
 function renderHero(totalDebt, totalSavings) {
@@ -798,13 +782,11 @@ let savingsEditOpen = false;
 function toggleSavingsEdit() {
   savingsEditOpen = !savingsEditOpen;
   document.getElementById('ef-edit').style.display = savingsEditOpen ? 'block' : 'none';
-  document.getElementById('sf-edit').style.display = savingsEditOpen ? 'block' : 'none';
   document.getElementById('savings-edit-btns').style.display = savingsEditOpen ? 'flex' : 'none';
 }
 function saveSavings() {
   const b = getBalances();
   b.ef = parseFloat(document.getElementById('ef-val').value) || 0;
-  b.sf = parseFloat(document.getElementById('sf-val').value) || 0;
   setBalances(b);
   const totalSavings = renderSavings(b);
   const totalDebt = b.nab + b.cba + b.lat + b.bp;
