@@ -348,6 +348,18 @@
         </div>
       </div>
 
+      <div class="goal-item">
+        <div class="goal-top">
+          <span class="goal-name">Sinking fund</span>
+          <span class="goal-meta" id="sf-meta">Not started</span>
+        </div>
+        <div class="goal-track"><div class="goal-fill" style="background:var(--amber);width:0%;" id="sf-bar"></div></div>
+        <div class="goal-note">Cleo maintenance (May–Jun)</div>
+        <div id="sf-edit" style="display:none;margin-top:6px;">
+          <input class="edit-input" style="width:120px;" type="number" id="sf-val" value="0" placeholder="Current balance">
+        </div>
+      </div>
+
       <div class="total-row">
         <span class="total-label">Total saved</span>
         <span class="total-val" style="color:var(--green);" id="total-savings">$1,000</span>
@@ -839,15 +851,29 @@ async function loadAll() {
     const until = new Date(end);
     until.setDate(end.getDate() + 1);
 
-    // Fetch transactions and accounts in parallel
-    const [txns, accounts] = await Promise.all([
+    // Fetch transactions and accounts in parallel (independent — one can fail without breaking the other)
+    const [txnResult, acctResult] = await Promise.allSettled([
       fetchUpTransactions(token, start, until),
       fetchUpAccounts(token)
     ]);
 
-    renderSpending(txns);
-    renderEssentialsSaver(accounts);
-    setStatus('ok', 'Up to date · ' + new Date().toLocaleTimeString('en-AU', {hour:'2-digit',minute:'2-digit'}));
+    if (txnResult.status === 'fulfilled') {
+      renderSpending(txnResult.value);
+    } else {
+      document.getElementById('spending-rows').innerHTML = '<div style="font-size:13px;color:#A32D2D;padding:0.5rem 0;">Failed to load spending: ' + txnResult.reason.message + '</div>';
+    }
+
+    if (acctResult.status === 'fulfilled') {
+      renderEssentialsSaver(acctResult.value);
+    } else {
+      document.getElementById('m-essentials').textContent = '—';
+      document.getElementById('m-essentials-sub').textContent = 'Could not load accounts';
+    }
+
+    const anyFailed = txnResult.status === 'rejected' || acctResult.status === 'rejected';
+    setStatus(anyFailed ? 'error' : 'ok',
+      anyFailed ? 'Some data failed to load — check your token'
+                : 'Up to date · ' + new Date().toLocaleTimeString('en-AU', {hour:'2-digit',minute:'2-digit'}));
     document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleString('en-AU', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   } catch (e) {
     setStatus('error', 'Could not load Up Bank data — check your token');
