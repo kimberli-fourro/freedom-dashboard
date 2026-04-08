@@ -423,7 +423,8 @@ const CAT_COLORS = {
   'Discretionary': '#D85A30',
   'Impulse': '#B4B2A9',
   'Debt Repayment': '#993C1D',
-  'Savings': '#1D9E75'
+  'Savings': '#1D9E75',
+  'Internal Transfer': '#AFA9EC'
 };
 
 // ── MERCHANT CATEGORISATION (mirrors Python script) ──────────
@@ -476,14 +477,20 @@ const MERCHANT_CATS = {
 };
 
 // Categories that are NOT spending — tracked separately
-const NON_SPENDING_CATS = ['Debt Repayment', 'Savings'];
+const NON_SPENDING_CATS = ['Debt Repayment', 'Savings', 'Internal Transfer'];
 
 function categorise(txn) {
   const desc = (txn.attributes.description || '').toLowerCase();
   const raw = (txn.attributes.rawText || '').toLowerCase();
   const combined = desc + ' ' + raw;
 
-  // Check debt/savings first (higher priority — these are internal transfers, not spending)
+  // Detect Up internal transfers first (saver ↔ spendable movements)
+  const upCat = txn.relationships?.category?.data?.id || '';
+  if (upCat === 'transfers' || upCat === 'transfersandrefunds') return 'Internal Transfer';
+  if (combined.includes('transfer to') || combined.includes('transfer from')) return 'Internal Transfer';
+  if (combined.includes('essentials') || combined.includes('saver')) return 'Internal Transfer';
+
+  // Check debt/savings next (higher priority than spending)
   for (const [keyword, cat] of Object.entries(MERCHANT_CATS)) {
     if (NON_SPENDING_CATS.includes(cat) && combined.includes(keyword)) return cat;
   }
