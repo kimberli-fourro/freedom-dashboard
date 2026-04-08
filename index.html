@@ -237,13 +237,13 @@
     <div class="grid-4">
       <div class="tile">
         <div class="tile-label">Debt repayment</div>
-        <div style="font-size:18px;font-weight:600;color:#D85A30;">$71</div>
-        <div class="tile-sub">NAB ~$46 · CBA $25</div>
+        <div style="font-size:18px;font-weight:600;color:#D85A30;">$58</div>
+        <div class="tile-sub">NAB ~$46 · CBA ~$12</div>
       </div>
       <div class="tile">
         <div class="tile-label">Savings</div>
-        <div style="font-size:18px;font-weight:600;color:var(--green);">$316</div>
-        <div class="tile-sub">10% emergency fund</div>
+        <div style="font-size:18px;font-weight:600;color:var(--green);">$100</div>
+        <div class="tile-sub">until stabilised (was $316)</div>
       </div>
       <div class="tile">
         <div class="tile-label">Living expenses</div>
@@ -263,10 +263,13 @@
       <div class="alloc-seg" style="width:40%;background:#AFA9EC;border-radius:0 100px 100px 0;" id="alloc-bar-allow"></div>
     </div>
     <div class="alloc-legend">
-      <span class="leg"><span class="leg-dot" style="background:#D85A30;"></span>Debt $71</span>
-      <span class="leg"><span class="leg-dot" style="background:var(--green-mid);"></span>Savings $316</span>
+      <span class="leg"><span class="leg-dot" style="background:#D85A30;"></span>Debt $58</span>
+      <span class="leg"><span class="leg-dot" style="background:var(--green-mid);"></span>Savings $100</span>
       <span class="leg"><span class="leg-dot" style="background:#7F77DD;"></span>Living</span>
       <span class="leg"><span class="leg-dot" style="background:#AFA9EC;"></span>Spending allowance</span>
+    </div>
+    <div class="tip" style="margin-top:8px;">
+      <strong>Tonga's contribution:</strong> $359.42 for bills, received weekly (usually Fri, latest Mon). Lands in Spendable — already reflected in your balance.
     </div>
   </div>
 
@@ -294,7 +297,8 @@
         <div class="debt-dot" style="background:#7F77DD;"></div>
         <div class="debt-block">
           <div class="debt-name">CBA Credit Card <span class="tag tag-next">Next</span></div>
-          <div class="debt-note">0% + $15/mo fee · attack after NAB</div>
+          <div class="debt-note">0% + $15/mo fee · $25/mo minimum · ~$12/fn</div>
+          <div class="debt-note" style="color:var(--purple);margin-top:2px;">Increase once NAB is paid off</div>
           <div class="bar-wrap"><div class="bar-fill" style="background:#7F77DD;" id="bar-cba"></div></div>
         </div>
         <div class="debt-amt"><span id="bal-cba-display">$980</span><br><input class="edit-input" id="bal-cba-edit" style="display:none;" type="number" value="980"></div>
@@ -402,8 +406,8 @@
 <script>
 // ── CONFIG ──────────────────────────────────────────────────
 const INCOME = 3163;
-const FIXED_DEBT_PAYMENTS = 71; // NAB ~$46/fn ($100/mo) + CBA $25/fn
-const FIXED_SAVINGS = 316;
+const FIXED_DEBT_PAYMENTS = 58; // NAB ~$46/fn ($100/mo) + CBA ~$12/fn ($25/mo)
+const FIXED_SAVINGS = 100; // $100/fn until stabilised (was $316)
 // Budget targets per category (fortnightly)
 const TARGETS = {
   'Essentials': 900,
@@ -540,7 +544,6 @@ async function fetchUpAccounts(token) {
 }
 
 function findEssentialsSaver(accounts) {
-  // Look for the Essentials saver — Up names it based on user input but common names include "Essentials", "Bills", etc.
   const essentials = accounts.find(a => {
     const name = (a.attributes.displayName || '').toLowerCase();
     return name.includes('essential');
@@ -548,9 +551,15 @@ function findEssentialsSaver(accounts) {
   return essentials;
 }
 
+function findSpendingAccount(accounts) {
+  // Up's main transactional account has accountType "TRANSACTIONAL"
+  return accounts.find(a => a.attributes.accountType === 'TRANSACTIONAL');
+}
+
 // ── TRANSACTION STORE (for re-categorisation) ───────────────
 let allFilteredTxns = [];
 let essentialsSaverBalance = 0;
+let upSpendableBalance = null; // actual Up Spending account balance
 
 function getTxnOverrides() {
   return JSON.parse(localStorage.getItem('txn_cat_overrides') || '{}');
@@ -616,7 +625,8 @@ function renderHero(totalDebt, totalSavings) {
   document.getElementById('hero-pct').textContent = pct + '% of the way to $0';
 }
 
-function renderEssentialsSaver(accounts) {
+function renderAccountBalances(accounts) {
+  // Essentials saver
   const essentials = findEssentialsSaver(accounts);
   const el = document.getElementById('m-essentials');
   const sub = document.getElementById('m-essentials-sub');
@@ -625,14 +635,21 @@ function renderEssentialsSaver(accounts) {
     essentialsSaverBalance = bal;
     el.textContent = '$' + Math.round(bal).toLocaleString();
     el.style.color = bal > 0 ? 'var(--green)' : 'var(--text-tertiary)';
-    sub.textContent = essentials.attributes.displayName + ' · Up saver';
+    sub.textContent = essentials.attributes.displayName + ' · bills & expenses';
   } else {
     essentialsSaverBalance = 0;
     el.textContent = '—';
     el.style.color = 'var(--text-tertiary)';
     sub.textContent = 'No Essentials saver found';
   }
-  // Recalculate allowance now that we have the essentials balance
+
+  // Up Spendable (transactional) account — this IS "yours to spend"
+  const spending = findSpendingAccount(accounts);
+  if (spending) {
+    upSpendableBalance = parseFloat(spending.attributes.balance.value);
+  }
+
+  // Update allowance display with real balance
   if (allFilteredTxns.length > 0) rebuildSpendingUI();
 }
 
@@ -671,17 +688,30 @@ function rebuildSpendingUI() {
   const totalSpent = Object.values(cats).reduce((a,b) => a+b, 0);
   document.getElementById('m-spent').textContent = '$' + Math.round(totalSpent).toLocaleString();
 
-  // Calc allowance remaining (essentials saver = money earmarked for bills, not spendable)
-  const living = totalSpent + essentialsSaverBalance;
-  const remaining = INCOME - FIXED_DEBT_PAYMENTS - FIXED_SAVINGS - living;
-  document.getElementById('alloc-living').textContent = '$' + Math.round(living).toLocaleString();
-  document.getElementById('alloc-allowance').textContent = remaining >= 0 ? '$' + Math.round(remaining).toLocaleString() : '–$' + Math.abs(Math.round(remaining)).toLocaleString();
-  document.getElementById('alloc-allowance').style.color = remaining >= 0 ? 'var(--green)' : '#A32D2D';
-  document.getElementById('alloc-allowance-sub').textContent = remaining >= 0 ? 'remaining this fortnight' : 'over budget';
+  // Living expenses = what you've spent this fortnight (shown in allocation)
+  document.getElementById('alloc-living').textContent = '$' + Math.round(totalSpent).toLocaleString();
+  document.getElementById('alloc-living-sub').textContent = 'spent this fortnight';
 
-  const livingPct = Math.round(living / INCOME * 100);
-  const allowPct = Math.max(0, 100 - 10 - 10 - livingPct);
-  document.getElementById('alloc-bar-living').style.width = livingPct + '%';
+  // "Yours to spend" = actual Up Spendable account balance (the real truth)
+  if (upSpendableBalance !== null) {
+    const spendable = upSpendableBalance;
+    document.getElementById('alloc-allowance').textContent = spendable >= 0 ? '$' + Math.round(spendable).toLocaleString() : '–$' + Math.abs(Math.round(spendable)).toLocaleString();
+    document.getElementById('alloc-allowance').style.color = spendable >= 0 ? 'var(--green)' : '#A32D2D';
+    document.getElementById('alloc-allowance-sub').textContent = 'in Up Spendable';
+  } else {
+    // Fallback if accounts haven't loaded yet
+    const remaining = INCOME - FIXED_DEBT_PAYMENTS - FIXED_SAVINGS - totalSpent;
+    document.getElementById('alloc-allowance').textContent = remaining >= 0 ? '$' + Math.round(remaining).toLocaleString() : '–$' + Math.abs(Math.round(remaining)).toLocaleString();
+    document.getElementById('alloc-allowance').style.color = remaining >= 0 ? 'var(--green)' : '#A32D2D';
+    document.getElementById('alloc-allowance-sub').textContent = 'estimated remaining';
+  }
+
+  // Allocation bar proportions
+  const debtPct = Math.round(FIXED_DEBT_PAYMENTS / INCOME * 100);
+  const savPct = Math.round(FIXED_SAVINGS / INCOME * 100);
+  const spentPct = Math.round(totalSpent / INCOME * 100);
+  const allowPct = Math.max(0, 100 - debtPct - savPct - spentPct);
+  document.getElementById('alloc-bar-living').style.width = spentPct + '%';
   document.getElementById('alloc-bar-allow').style.width = allowPct + '%';
 
   // Render spending rows with expandable transaction lists
@@ -851,7 +881,7 @@ async function loadAll() {
     }
 
     if (acctResult.status === 'fulfilled') {
-      renderEssentialsSaver(acctResult.value);
+      renderAccountBalances(acctResult.value);
     } else {
       document.getElementById('m-essentials').textContent = '—';
       document.getElementById('m-essentials-sub').textContent = 'Could not load accounts';
