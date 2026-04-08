@@ -97,12 +97,31 @@
   .goal-note { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
 
   /* SPENDING */
-  .spend-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
-  .spend-cat { font-size: 13px; color: var(--text); flex: 1; }
+  .spend-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+  .spend-row:hover { background: var(--surface); border-radius: 8px; margin: 0 -6px; padding: 6px 6px; }
+  .spend-cat { font-size: 13px; color: var(--text); flex: 1; display: flex; align-items: center; gap: 5px; }
+  .spend-chevron { font-size: 9px; color: var(--text-tertiary); transition: transform 0.2s; }
+  .spend-chevron.open { transform: rotate(90deg); }
   .spend-bar-wrap { width: 80px; height: 5px; background: var(--surface); border-radius: 100px; overflow: hidden; flex-shrink: 0; }
   .spend-bar { height: 100%; border-radius: 100px; }
   .spend-amt { font-size: 13px; font-weight: 500; color: var(--text-secondary); min-width: 52px; text-align: right; }
   .spend-pct { font-size: 10px; color: var(--text-tertiary); min-width: 28px; text-align: right; }
+
+  /* TRANSACTION LIST */
+  .txn-list { display: none; padding: 4px 0 8px 0; }
+  .txn-list.open { display: block; }
+  .txn-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--surface); font-size: 12px; }
+  .txn-item:last-child { border-bottom: none; }
+  .txn-desc { flex: 1; color: var(--text-secondary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .txn-date { font-size: 10px; color: var(--text-tertiary); min-width: 50px; }
+  .txn-amt { font-weight: 500; color: var(--text); min-width: 55px; text-align: right; }
+  .txn-recat { font-size: 10px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-secondary); cursor: pointer; appearance: none; -webkit-appearance: none; }
+  .txn-recat:hover { border-color: var(--purple-light); }
+  .txn-recat:focus { border-color: var(--purple); outline: none; }
+
+  /* ESSENTIALS SAVER */
+  .essentials-tile { position: relative; }
+  .essentials-sub { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
 
   /* ALLOC BAR */
   .alloc-bar { display: flex; height: 10px; border-radius: 100px; overflow: hidden; gap: 2px; margin: 10px 0 8px; }
@@ -205,10 +224,10 @@
       <div class="tile-val amber" id="m-spent">–</div>
       <div class="tile-sub" id="m-period">–</div>
     </div>
-    <div class="tile">
-      <div class="tile-label">Emergency fund</div>
-      <div class="tile-val green" id="m-savings">$1,000</div>
-      <div class="tile-sub">AMP Bank</div>
+    <div class="tile essentials-tile">
+      <div class="tile-label">Essentials saver</div>
+      <div class="tile-val green" id="m-essentials">–</div>
+      <div class="essentials-sub" id="m-essentials-sub">Loading from Up...</div>
     </div>
   </div>
 
@@ -517,6 +536,43 @@ async function fetchUpTransactions(token, since, until) {
   return txns;
 }
 
+// ── UP BANK ACCOUNTS API ────────────────────────────────────
+async function fetchUpAccounts(token) {
+  let url = 'https://api.up.com.au/api/v1/accounts?page[size]=100';
+  let accounts = [];
+  while (url) {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('Up Bank accounts API error: ' + res.status);
+    const data = await res.json();
+    accounts = accounts.concat(data.data || []);
+    url = data.links && data.links.next ? data.links.next : null;
+  }
+  return accounts;
+}
+
+function findEssentialsSaver(accounts) {
+  // Look for the Essentials saver — Up names it based on user input but common names include "Essentials", "Bills", etc.
+  const essentials = accounts.find(a => {
+    const name = (a.attributes.displayName || '').toLowerCase();
+    return name.includes('essential');
+  });
+  return essentials;
+}
+
+// ── TRANSACTION STORE (for re-categorisation) ───────────────
+let allFilteredTxns = [];
+
+function getTxnOverrides() {
+  return JSON.parse(localStorage.getItem('txn_cat_overrides') || '{}');
+}
+function setTxnOverrides(o) { localStorage.setItem('txn_cat_overrides', JSON.stringify(o)); }
+
+function categoriseWithOverrides(txn) {
+  const overrides = getTxnOverrides();
+  if (overrides[txn.id]) return overrides[txn.id];
+  return categorise(txn);
+}
+
 // ── RENDER ──────────────────────────────────────────────────
 function showDashboard() {
   document.getElementById('setup-panel').style.display = 'none';
@@ -562,7 +618,6 @@ function renderSavings(b) {
   document.getElementById('sf-val').value = sf;
   const total = ef + sf;
   document.getElementById('total-savings').textContent = '$' + total.toLocaleString();
-  document.getElementById('m-savings').textContent = '$' + ef.toLocaleString();
   return total;
 }
 
@@ -576,13 +631,29 @@ function renderHero(totalDebt, totalSavings) {
   document.getElementById('hero-pct').textContent = pct + '% of the way to $0';
 }
 
+function renderEssentialsSaver(accounts) {
+  const essentials = findEssentialsSaver(accounts);
+  const el = document.getElementById('m-essentials');
+  const sub = document.getElementById('m-essentials-sub');
+  if (essentials) {
+    const bal = parseFloat(essentials.attributes.balance.value);
+    el.textContent = '$' + Math.round(bal).toLocaleString();
+    el.style.color = bal > 0 ? 'var(--green)' : 'var(--text-tertiary)';
+    sub.textContent = essentials.attributes.displayName + ' · Up saver';
+  } else {
+    el.textContent = '—';
+    el.style.color = 'var(--text-tertiary)';
+    sub.textContent = 'No Essentials saver found';
+  }
+}
+
 function renderSpending(txns) {
   const { start, end } = getFortnightDates();
   document.getElementById('spending-period-label').textContent = fmtDate(start) + ' – ' + fmtDate(end);
   document.getElementById('m-period').textContent = fmtDate(start) + ' – ' + fmtDate(end);
 
   // Filter: exclude internal transfers, savings movements
-  const filtered = txns.filter(t => {
+  allFilteredTxns = txns.filter(t => {
     const amt = parseFloat(t.attributes.amount.value);
     if (amt >= 0) return false; // only debits
     const desc = (t.attributes.description || '').toLowerCase();
@@ -592,13 +663,20 @@ function renderSpending(txns) {
     return true;
   });
 
-  // Categorise
+  rebuildSpendingUI();
+}
+
+function rebuildSpendingUI() {
+  // Categorise with overrides
   const cats = {};
-  Object.keys(TARGETS).forEach(c => cats[c] = 0);
-  filtered.forEach(t => {
+  const catTxns = {};
+  Object.keys(TARGETS).forEach(c => { cats[c] = 0; catTxns[c] = []; });
+  allFilteredTxns.forEach(t => {
     const amt = Math.abs(parseFloat(t.attributes.amount.value));
-    const cat = categorise(t);
+    const cat = categoriseWithOverrides(t);
     cats[cat] = (cats[cat] || 0) + amt;
+    if (!catTxns[cat]) catTxns[cat] = [];
+    catTxns[cat].push(t);
   });
 
   const totalSpent = Object.values(cats).reduce((a,b) => a+b, 0);
@@ -617,23 +695,74 @@ function renderSpending(txns) {
   document.getElementById('alloc-bar-living').style.width = livingPct + '%';
   document.getElementById('alloc-bar-allow').style.width = allowPct + '%';
 
-  // Render spending rows
+  // Render spending rows with expandable transaction lists
   const rows = document.getElementById('spending-rows');
   const maxAmt = Math.max(...Object.values(cats), 1);
+  const catNames = Object.keys(TARGETS);
+
   rows.innerHTML = Object.entries(cats).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => {
     const pct = Math.round(amt / (TARGETS[cat] || 1) * 100);
     const barW = Math.min(100, Math.round(amt / maxAmt * 100));
     const over = amt > (TARGETS[cat] || Infinity);
-    return `<div class="spend-row">
-      <span class="spend-cat">${cat}</span>
-      <div class="spend-bar-wrap"><div class="spend-bar" style="width:${barW}%;background:${over ? '#D85A30' : CAT_COLORS[cat]};"></div></div>
-      <span class="spend-pct" style="color:${over?'#A32D2D':'var(--text-tertiary)'};">${pct}%</span>
-      <span class="spend-amt" style="color:${over?'#A32D2D':'var(--text-secondary)'};">$${Math.round(amt).toLocaleString()}</span>
+    const txnCount = (catTxns[cat] || []).length;
+    const safeId = cat.replace(/[^a-zA-Z]/g, '');
+
+    // Build transaction rows
+    const txnRows = (catTxns[cat] || []).sort((a,b) => new Date(b.attributes.createdAt) - new Date(a.attributes.createdAt)).map(t => {
+      const tAmt = Math.abs(parseFloat(t.attributes.amount.value));
+      const tDate = new Date(t.attributes.createdAt);
+      const dateStr = tDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+      const desc = t.attributes.description || 'Unknown';
+      const selectOptions = catNames.map(c =>
+        `<option value="${c}" ${c === cat ? 'selected' : ''}>${c}</option>`
+      ).join('');
+      return `<div class="txn-item">
+        <span class="txn-date">${dateStr}</span>
+        <span class="txn-desc" title="${desc}">${desc}</span>
+        <span class="txn-amt">$${tAmt.toFixed(2)}</span>
+        <select class="txn-recat" onchange="recategorise('${t.id}', this.value)">
+          ${selectOptions}
+        </select>
+      </div>`;
+    }).join('');
+
+    return `<div>
+      <div class="spend-row" onclick="toggleTxnList('${safeId}')">
+        <span class="spend-cat"><span class="spend-chevron" id="chev-${safeId}">▶</span> ${cat} <span style="font-size:10px;color:var(--text-tertiary);">(${txnCount})</span></span>
+        <div class="spend-bar-wrap"><div class="spend-bar" style="width:${barW}%;background:${over ? '#D85A30' : CAT_COLORS[cat]};"></div></div>
+        <span class="spend-pct" style="color:${over?'#A32D2D':'var(--text-tertiary)'};">${pct}%</span>
+        <span class="spend-amt" style="color:${over?'#A32D2D':'var(--text-secondary)'};">$${Math.round(amt).toLocaleString()}</span>
+      </div>
+      <div class="txn-list" id="txn-${safeId}">
+        ${txnRows.length ? txnRows : '<div style="font-size:12px;color:var(--text-tertiary);padding:6px 0;">No transactions</div>'}
+      </div>
     </div>`;
   }).join('');
 
   // Tip
   document.getElementById('allowance-tip').innerHTML = `<strong>24-hour rule:</strong> Cart sitting? Leave it overnight. You've spent <strong>$${Math.round(totalSpent).toLocaleString()}</strong> this fortnight — check your balance before you buy.`;
+}
+
+function toggleTxnList(safeId) {
+  const list = document.getElementById('txn-' + safeId);
+  const chev = document.getElementById('chev-' + safeId);
+  const isOpen = list.classList.contains('open');
+  list.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function recategorise(txnId, newCat) {
+  const overrides = getTxnOverrides();
+  // Find the original category — if newCat matches original, remove override
+  const txn = allFilteredTxns.find(t => t.id === txnId);
+  const originalCat = txn ? categorise(txn) : null;
+  if (newCat === originalCat) {
+    delete overrides[txnId];
+  } else {
+    overrides[txnId] = newCat;
+  }
+  setTxnOverrides(overrides);
+  rebuildSpendingUI();
 }
 
 // ── DEBT EDIT ────────────────────────────────────────────────
@@ -721,8 +850,15 @@ async function loadAll() {
     const { start, end } = getFortnightDates();
     const until = new Date(end);
     until.setDate(end.getDate() + 1);
-    const txns = await fetchUpTransactions(token, start, until);
+
+    // Fetch transactions and accounts in parallel
+    const [txns, accounts] = await Promise.all([
+      fetchUpTransactions(token, start, until),
+      fetchUpAccounts(token)
+    ]);
+
     renderSpending(txns);
+    renderEssentialsSaver(accounts);
     setStatus('ok', 'Up to date · ' + new Date().toLocaleTimeString('en-AU', {hour:'2-digit',minute:'2-digit'}));
     document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleString('en-AU', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   } catch (e) {
