@@ -248,7 +248,7 @@
       <div class="tile">
         <div class="tile-label">Living expenses</div>
         <div style="font-size:18px;font-weight:600;color:#7F77DD;" id="alloc-living">$2,542</div>
-        <div class="tile-sub">essentials + subs</div>
+        <div class="tile-sub" id="alloc-living-sub">essentials saver + spending</div>
       </div>
       <div class="tile">
         <div class="tile-label">Yours to spend</div>
@@ -561,6 +561,7 @@ function findEssentialsSaver(accounts) {
 
 // ── TRANSACTION STORE (for re-categorisation) ───────────────
 let allFilteredTxns = [];
+let essentialsSaverBalance = 0;
 
 function getTxnOverrides() {
   return JSON.parse(localStorage.getItem('txn_cat_overrides') || '{}');
@@ -637,14 +638,18 @@ function renderEssentialsSaver(accounts) {
   const sub = document.getElementById('m-essentials-sub');
   if (essentials) {
     const bal = parseFloat(essentials.attributes.balance.value);
+    essentialsSaverBalance = bal;
     el.textContent = '$' + Math.round(bal).toLocaleString();
     el.style.color = bal > 0 ? 'var(--green)' : 'var(--text-tertiary)';
     sub.textContent = essentials.attributes.displayName + ' · Up saver';
   } else {
+    essentialsSaverBalance = 0;
     el.textContent = '—';
     el.style.color = 'var(--text-tertiary)';
     sub.textContent = 'No Essentials saver found';
   }
+  // Recalculate allowance now that we have the essentials balance
+  if (allFilteredTxns.length > 0) rebuildSpendingUI();
 }
 
 function renderSpending(txns) {
@@ -682,8 +687,8 @@ function rebuildSpendingUI() {
   const totalSpent = Object.values(cats).reduce((a,b) => a+b, 0);
   document.getElementById('m-spent').textContent = '$' + Math.round(totalSpent).toLocaleString();
 
-  // Calc allowance remaining
-  const living = totalSpent;
+  // Calc allowance remaining (essentials saver = money earmarked for bills, not spendable)
+  const living = totalSpent + essentialsSaverBalance;
   const remaining = INCOME - FIXED_DEBT_PAYMENTS - FIXED_SAVINGS - living;
   document.getElementById('alloc-living').textContent = '$' + Math.round(living).toLocaleString();
   document.getElementById('alloc-allowance').textContent = remaining >= 0 ? '$' + Math.round(remaining).toLocaleString() : '–$' + Math.abs(Math.round(remaining)).toLocaleString();
