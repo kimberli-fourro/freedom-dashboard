@@ -505,8 +505,8 @@ function setBalances(b) { localStorage.setItem('balances', JSON.stringify(b)); }
 
 // ── FORTNIGHT DATES ──────────────────────────────────────────
 function getFortnightDates() {
-  // Pay cycle: anchor to a known payday. Using 2026-03-25 as reference.
-  const anchor = new Date('2026-03-25T00:00:00');
+  // Pay cycle: anchor to a known payday. Using 2026-03-24 as reference (fortnights starting 24 Mar, 7 Apr, 21 Apr, ...).
+  const anchor = new Date('2026-03-24T00:00:00');
   const now = new Date();
   const diff = Math.floor((now - anchor) / (14 * 24 * 3600 * 1000));
   const start = new Date(anchor);
