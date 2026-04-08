@@ -421,7 +421,9 @@ const CAT_COLORS = {
   'Subscriptions': '#1D9E75',
   'Self & Health': '#EF9F27',
   'Discretionary': '#D85A30',
-  'Impulse': '#B4B2A9'
+  'Impulse': '#B4B2A9',
+  'Debt Repayment': '#993C1D',
+  'Savings': '#1D9E75'
 };
 
 // ── MERCHANT CATEGORISATION (mirrors Python script) ──────────
@@ -464,15 +466,30 @@ const MERCHANT_CATS = {
   'hoyts': 'Discretionary', 'reading cinema': 'Discretionary',
   // Impulse
   'temu': 'Impulse', 'shein': 'Impulse', 'wish': 'Impulse',
-  'lotterywest': 'Impulse', 'tatts': 'Impulse', 'sportsbet': 'Impulse'
+  'lotterywest': 'Impulse', 'tatts': 'Impulse', 'sportsbet': 'Impulse',
+  // Debt Repayment
+  'nab': 'Debt Repayment', 'national australia': 'Debt Repayment',
+  'cba': 'Debt Repayment', 'commonwealth': 'Debt Repayment', 'commbank': 'Debt Repayment',
+  'latitude': 'Debt Repayment', 'beforepay': 'Debt Repayment',
+  // Savings
+  'amp': 'Savings', 'amp bank': 'Savings'
 };
+
+// Categories that are NOT spending — tracked separately
+const NON_SPENDING_CATS = ['Debt Repayment', 'Savings'];
 
 function categorise(txn) {
   const desc = (txn.attributes.description || '').toLowerCase();
   const raw = (txn.attributes.rawText || '').toLowerCase();
   const combined = desc + ' ' + raw;
+
+  // Check debt/savings first (higher priority — these are internal transfers, not spending)
   for (const [keyword, cat] of Object.entries(MERCHANT_CATS)) {
-    if (combined.includes(keyword)) return cat;
+    if (NON_SPENDING_CATS.includes(cat) && combined.includes(keyword)) return cat;
+  }
+  // Then check spending categories
+  for (const [keyword, cat] of Object.entries(MERCHANT_CATS)) {
+    if (!NON_SPENDING_CATS.includes(cat) && combined.includes(keyword)) return cat;
   }
   return 'Discretionary';
 }
@@ -663,9 +680,8 @@ function renderSpending(txns) {
     const amt = parseFloat(t.attributes.amount.value);
     if (amt >= 0) return false; // only debits
     const desc = (t.attributes.description || '').toLowerCase();
-    if (desc.includes('transfer') || desc.includes('save') || desc.includes('round up')) return false;
-    const cat = t.relationships?.category?.data?.id || '';
-    if (cat === 'transfersandrefunds') return false;
+    // Only exclude Up internal movements (round-ups, cover-to-cover) — NOT debt/savings transfers
+    if (desc.includes('round up') || desc.includes('cover from') || desc.includes('forward from')) return false;
     return true;
   });
 
@@ -673,10 +689,12 @@ function renderSpending(txns) {
 }
 
 function rebuildSpendingUI() {
-  // Categorise with overrides
+  // Categorise all transactions (spending + non-spending)
   const cats = {};
   const catTxns = {};
-  Object.keys(TARGETS).forEach(c => { cats[c] = 0; catTxns[c] = []; });
+  const allCatNames = [...Object.keys(TARGETS), ...NON_SPENDING_CATS];
+  allCatNames.forEach(c => { cats[c] = 0; catTxns[c] = []; });
+
   allFilteredTxns.forEach(t => {
     const amt = Math.abs(parseFloat(t.attributes.amount.value));
     const cat = categoriseWithOverrides(t);
@@ -685,21 +703,22 @@ function rebuildSpendingUI() {
     catTxns[cat].push(t);
   });
 
-  const totalSpent = Object.values(cats).reduce((a,b) => a+b, 0);
+  // Only count spending categories in the spending total
+  const spendingCats = Object.keys(TARGETS);
+  const totalSpent = spendingCats.reduce((sum, c) => sum + (cats[c] || 0), 0);
   document.getElementById('m-spent').textContent = '$' + Math.round(totalSpent).toLocaleString();
 
-  // Living expenses = what you've spent this fortnight (shown in allocation)
+  // Living expenses = what you've spent this fortnight (spending categories only)
   document.getElementById('alloc-living').textContent = '$' + Math.round(totalSpent).toLocaleString();
   document.getElementById('alloc-living-sub').textContent = 'spent this fortnight';
 
-  // "Yours to spend" = actual Up Spendable account balance (the real truth)
+  // "Yours to spend" = actual Up Spendable account balance
   if (upSpendableBalance !== null) {
     const spendable = upSpendableBalance;
     document.getElementById('alloc-allowance').textContent = spendable >= 0 ? '$' + Math.round(spendable).toLocaleString() : '–$' + Math.abs(Math.round(spendable)).toLocaleString();
     document.getElementById('alloc-allowance').style.color = spendable >= 0 ? 'var(--green)' : '#A32D2D';
     document.getElementById('alloc-allowance-sub').textContent = 'in Up Spendable';
   } else {
-    // Fallback if accounts haven't loaded yet
     const remaining = INCOME - FIXED_DEBT_PAYMENTS - FIXED_SAVINGS - totalSpent;
     document.getElementById('alloc-allowance').textContent = remaining >= 0 ? '$' + Math.round(remaining).toLocaleString() : '–$' + Math.abs(Math.round(remaining)).toLocaleString();
     document.getElementById('alloc-allowance').style.color = remaining >= 0 ? 'var(--green)' : '#A32D2D';
@@ -714,25 +733,29 @@ function rebuildSpendingUI() {
   document.getElementById('alloc-bar-living').style.width = spentPct + '%';
   document.getElementById('alloc-bar-allow').style.width = allowPct + '%';
 
-  // Render spending rows with expandable transaction lists
-  const rows = document.getElementById('spending-rows');
-  const maxAmt = Math.max(...Object.values(cats), 1);
-  const catNames = Object.keys(TARGETS);
-
-  rows.innerHTML = Object.entries(cats).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => {
-    const pct = Math.round(amt / (TARGETS[cat] || 1) * 100);
-    const barW = Math.min(100, Math.round(amt / maxAmt * 100));
-    const over = amt > (TARGETS[cat] || Infinity);
+  // Helper: build expandable category row with transaction list
+  function buildCatRow(cat, amt, showBudgetPct, maxAmt) {
     const txnCount = (catTxns[cat] || []).length;
+    if (txnCount === 0 && amt === 0) return '';
     const safeId = cat.replace(/[^a-zA-Z]/g, '');
+    const barW = maxAmt > 0 ? Math.min(100, Math.round(amt / maxAmt * 100)) : 0;
+    const color = CAT_COLORS[cat] || '#B4B2A9';
+    let pctStr = '';
+    let over = false;
+    if (showBudgetPct && TARGETS[cat]) {
+      const pct = Math.round(amt / TARGETS[cat] * 100);
+      over = amt > TARGETS[cat];
+      pctStr = `<span class="spend-pct" style="color:${over?'#A32D2D':'var(--text-tertiary)'};">${pct}%</span>`;
+    } else {
+      pctStr = '<span class="spend-pct"></span>';
+    }
 
-    // Build transaction rows
     const txnRows = (catTxns[cat] || []).sort((a,b) => new Date(b.attributes.createdAt) - new Date(a.attributes.createdAt)).map(t => {
       const tAmt = Math.abs(parseFloat(t.attributes.amount.value));
       const tDate = new Date(t.attributes.createdAt);
       const dateStr = tDate.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
       const desc = t.attributes.description || 'Unknown';
-      const selectOptions = catNames.map(c =>
+      const selectOptions = allCatNames.map(c =>
         `<option value="${c}" ${c === cat ? 'selected' : ''}>${c}</option>`
       ).join('');
       return `<div class="txn-item">
@@ -748,15 +771,40 @@ function rebuildSpendingUI() {
     return `<div>
       <div class="spend-row" onclick="toggleTxnList('${safeId}')">
         <span class="spend-cat"><span class="spend-chevron" id="chev-${safeId}">▶</span> ${cat} <span style="font-size:10px;color:var(--text-tertiary);">(${txnCount})</span></span>
-        <div class="spend-bar-wrap"><div class="spend-bar" style="width:${barW}%;background:${over ? '#D85A30' : CAT_COLORS[cat]};"></div></div>
-        <span class="spend-pct" style="color:${over?'#A32D2D':'var(--text-tertiary)'};">${pct}%</span>
+        <div class="spend-bar-wrap"><div class="spend-bar" style="width:${barW}%;background:${over ? '#D85A30' : color};"></div></div>
+        ${pctStr}
         <span class="spend-amt" style="color:${over?'#A32D2D':'var(--text-secondary)'};">$${Math.round(amt).toLocaleString()}</span>
       </div>
       <div class="txn-list" id="txn-${safeId}">
         ${txnRows.length ? txnRows : '<div style="font-size:12px;color:var(--text-tertiary);padding:6px 0;">No transactions</div>'}
       </div>
     </div>`;
-  }).join('');
+  }
+
+  const rows = document.getElementById('spending-rows');
+  const spendingAmts = spendingCats.map(c => cats[c] || 0);
+  const maxSpendAmt = Math.max(...spendingAmts, 1);
+
+  // Spending categories (sorted by amount)
+  let html = spendingCats
+    .map(c => [c, cats[c] || 0])
+    .sort((a,b) => b[1] - a[1])
+    .map(([cat, amt]) => buildCatRow(cat, amt, true, maxSpendAmt))
+    .join('');
+
+  // Non-spending categories (Debt Repayment, Savings) — shown below a divider
+  const nonSpendingRows = NON_SPENDING_CATS
+    .filter(c => (cats[c] || 0) > 0 || (catTxns[c] || []).length > 0)
+    .map(c => buildCatRow(c, cats[c] || 0, false, Math.max(...NON_SPENDING_CATS.map(nc => cats[nc] || 0), 1)));
+
+  if (nonSpendingRows.length > 0) {
+    html += `<div style="border-top:1px solid var(--border);margin:8px 0;padding-top:8px;">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:6px;">Debt & savings movements</div>
+      ${nonSpendingRows.join('')}
+    </div>`;
+  }
+
+  rows.innerHTML = html;
 
   // Tip
   document.getElementById('allowance-tip').innerHTML = `<strong>24-hour rule:</strong> Cart sitting? Leave it overnight. You've spent <strong>$${Math.round(totalSpent).toLocaleString()}</strong> this fortnight — check your balance before you buy.`;
